@@ -4956,7 +4956,7 @@ function etatParDefaut(){
     coefficients: JSON.parse(JSON.stringify(COEFFICIENTS_DEFAUT)),
     bareme: JSON.parse(JSON.stringify(BAREME_DEFAUT)),
     mentionsHonneur: JSON.parse(JSON.stringify(MENTIONS_HONNEUR_DEFAUT)),
-    schemaVersion: 2,                      // B3 — version du schéma de données (migrations)
+    schemaVersion: 3,                      // B3 — version du schéma de données (migrations)
     decisionsConseil: {},                  // C4 — {matricule: {sens, note, date}} décisions du conseil de classe
     poidsComposition: 2,                   // C1 — poids de la composition vs un devoir (2 = compte double, usage CEMAC courant)
     dureeInactiviteMinutes: 15,            // A4 — verrouillage automatique après N minutes d'inactivité
@@ -4966,7 +4966,7 @@ function etatParDefaut(){
     creneaux: CRENEAUX_DEFAUT.slice(), // ancien réglage global — conservé pour compatibilité avec les données existantes
     creneauxParNiveau: creneauxParNiveauDefaut(), // créneaux propres à chaque niveau (Maternelle, Fondamental 1... diffèrent du Collège/Lycée)
     utilisateurs: [
-      {utilisateur:"coordonnateur", motDePasse:"ChangezMoi1", role:"Direction"},
+      {utilisateur:"coordonnateur", motDePasse:"ChangezMoi1", role:"Coordonnateur"},
       {utilisateur:"secretariat", motDePasse:"ChangezMoi2", role:"Secrétariat"},
       {utilisateur:"econome", motDePasse:"ChangezMoi3", role:"Finances"},
       {utilisateur:"surveillance", motDePasse:"ChangezMoi4", role:"Vie scolaire"},
@@ -5253,7 +5253,7 @@ function garantirCompteAdministrateur(){
 
 // B3 — Migrations de schéma. Ajoutez de nouvelles étapes en incrémentant
 // SCHEMA_VERSION_ACTUELLE et en traitant les versions inférieures.
-const SCHEMA_VERSION_ACTUELLE = 2;
+const SCHEMA_VERSION_ACTUELLE = 3;
 function migrerSchema(){
   let v = ETAT.schemaVersion || 1;
   if(v < 2){
@@ -5264,6 +5264,18 @@ function migrerSchema(){
     if(ETAT.poidsComposition === undefined) ETAT.poidsComposition = 2;
     if(ETAT.dureeInactiviteMinutes === undefined) ETAT.dureeInactiviteMinutes = 15;
     v = 2;
+  }
+  if(v < 3){
+    // v2 -> v3 : le compte « coordonnateur » fourni par défaut était affecté
+    // au rôle « Direction », qui n'a pas accès au module Personnel. On le
+    // promeut au rôle « Coordonnateur » (chef d'établissement, accès total
+    // incluant l'enregistrement du personnel et la gestion des accès).
+    (ETAT.utilisateurs||[]).forEach(u=>{
+      if(u && u.utilisateur && String(u.utilisateur).toLowerCase()==="coordonnateur" && u.role==="Direction"){
+        u.role = "Coordonnateur";
+      }
+    });
+    v = 3;
   }
   ETAT.schemaVersion = v;
 }
