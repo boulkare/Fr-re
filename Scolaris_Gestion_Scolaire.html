@@ -1835,6 +1835,7 @@ const TRADUCTIONS = {
     rap_entrees_par_cat:"Entrées par catégorie", rap_sorties_par_cat:"Sorties par catégorie", rap_nb_ops:"Nb", rap_part:"Part", rap_aucune_operation:"Aucune opération sur la période.",
     rap_evolution_mensuelle:"Évolution mensuelle", rap_par_mode:"Répartition par mode de paiement", rap_entrees:"Entrées", rap_sorties:"Sorties", rap_journal:"journal détaillé", rap_source:"Source", rap_tiers:"Tiers", rap_reference:"Référence", rap_cat_caisse:"Caisse (menues opérations)",
     rap_scolarite_titre:"Point sur la scolarité (écolage)", rap_ecolage_percu_periode:"Écolage perçu sur la période", rap_ecolage_percu_cumule:"Écolage perçu cumulé (année scolaire)", rap_manque_a_gagner:"manque à gagner",
+    paie_export_csv:"Exporter le livre (CSV)",
     rap_paie_titre:"Paie du personnel sur la période", rap_paie_note:"Les salaires nets payés sont inclus dans les sorties (catégorie « Salaires et primes ») ; les cotisations et l'impôt n'y figurent que s'ils ont été comptabilisés depuis le livre de paie.",
     rap_execution_budget:"Exécution du budget prévisionnel", rap_solde_lettres:"Arrêté le présent rapport à un solde de",
     _fin_bloc:""
@@ -2657,6 +2658,7 @@ const TRADUCTIONS = {
     rap_entrees_par_cat:"Income by category", rap_sorties_par_cat:"Expenses by category", rap_nb_ops:"Count", rap_part:"Share", rap_aucune_operation:"No transaction over the period.",
     rap_evolution_mensuelle:"Monthly trend", rap_par_mode:"Breakdown by payment method", rap_entrees:"Income", rap_sorties:"Expenses", rap_journal:"detailed journal", rap_source:"Source", rap_tiers:"Third party", rap_reference:"Reference", rap_cat_caisse:"Petty cash",
     rap_scolarite_titre:"Tuition status", rap_ecolage_percu_periode:"Tuition collected over the period", rap_ecolage_percu_cumule:"Cumulative tuition collected (school year)", rap_manque_a_gagner:"forgone income",
+    paie_export_csv:"Export ledger (CSV)",
     rap_paie_titre:"Staff payroll over the period", rap_paie_note:"Net salaries paid are included in expenses (category “Salaires et primes”); contributions and tax only appear if they were recorded from the payroll ledger.",
     rap_execution_budget:"Budget execution", rap_solde_lettres:"This report is closed with a balance of",
     _fin_bloc:""
@@ -4129,6 +4131,7 @@ const TRADUCTIONS = {
     rap_entrees_par_cat:"Entradas por categoria", rap_sorties_par_cat:"Saídas por categoria", rap_nb_ops:"N.º", rap_part:"Peso", rap_aucune_operation:"Nenhuma operação no período.",
     rap_evolution_mensuelle:"Evolução mensal", rap_par_mode:"Repartição por modo de pagamento", rap_entrees:"Entradas", rap_sorties:"Saídas", rap_journal:"diário detalhado", rap_source:"Fonte", rap_tiers:"Terceiro", rap_reference:"Referência", rap_cat_caisse:"Caixa (pequenas operações)",
     rap_scolarite_titre:"Ponto de situação das propinas", rap_ecolage_percu_periode:"Propinas recebidas no período", rap_ecolage_percu_cumule:"Propinas recebidas acumuladas (ano letivo)", rap_manque_a_gagner:"perda de receita",
+    paie_export_csv:"Exportar o livro (CSV)",
     rap_paie_titre:"Folha de pagamento no período", rap_paie_note:"Os salários líquidos pagos estão incluídos nas saídas (categoria «Salaires et primes»); as contribuições e o imposto só aparecem se tiverem sido registados a partir do livro de salários.",
     rap_execution_budget:"Execução do orçamento previsional", rap_solde_lettres:"Encerrado o presente relatório com um saldo de",
     _fin_bloc:""
@@ -8594,14 +8597,17 @@ function rendreDocuments(){
 // des champs pour permettre un contrôle visuel par rapport au papier.
 function verifierDocumentScanne(){
   const texte = document.getElementById("verContenuQR").value;
-  const zone = document.getElementById("resultatVerification");
+  document.getElementById("resultatVerification").innerHTML = resultatVerificationDocumentHtml(texte);
+}
+// Rend le résultat de vérification d'un texte de QR, quel que soit son type :
+// document scolaire (CSSG-DOC) ou bulletin de paie (CSSG-PAIE). Utilisé par
+// l'outil « Vérifier un document » ET par l'onglet « Vérifier un bulletin ».
+function resultatVerificationDocumentHtml(texte){
+  if(/^\s*CSSG-PAIE\|/.test(texte||"")) return resultatVerificationPaieHtml(verifierBulletinPaieTexte(texte));
   const analyse = analyserQRDocument(texte);
-  if(!analyse){
-    zone.innerHTML = `<p style="color:var(--red-700,#B3261E);font-weight:600;">${t('ver_format_invalide')}</p>`;
-    return;
-  }
+  if(!analyse) return `<p style="color:var(--red-700,#B3261E);font-weight:600;">${t('ver_format_invalide')}</p>`;
   const authentique = verifierSignatureDocument(analyse.type, analyse.etablissement, analyse.identifiant, analyse.nom, analyse.date, analyse.signature);
-  zone.innerHTML = `
+  return `
     <p style="font-weight:700;color:${authentique?'var(--green-700)':'var(--red-700,#B3261E)'};">${authentique?t('ver_authentique'):t('ver_falsifie')}</p>
     <div class="grille-identite" style="grid-template-columns:1fr 1fr;margin-top:8px;">
       <div><b>${t('ver_type')}</b>${echapperHtml(analyse.type)}</div>
@@ -10491,7 +10497,7 @@ function verifierBulletinPaieSaisi(){
   const texte=(document.getElementById("paieVerifQR").value||"").trim();
   const numero=(document.getElementById("paieVerifNumero").value||"").trim();
   const code=(document.getElementById("paieVerifCode").value||"").trim();
-  if(texte){ zone.innerHTML=resultatVerificationPaieHtml(verifierBulletinPaieTexte(texte)); return; }
+  if(texte){ zone.innerHTML=resultatVerificationDocumentHtml(texte); return; }
   if(numero){
     const r=verifierBulletinPaieParNumero(numero, code);
     if(!r.trouve){ zone.innerHTML=`<p style="color:var(--red-700,#B3261E);font-weight:600;">${t('paie_ver_introuvable')}</p>`; return; }
@@ -10649,9 +10655,9 @@ function construireLivrePaieHtml(mois){
         <tr style="font-weight:800;"><td colspan="6" style="text-align:left;">${t('paie_impot_a_reverser')} (${echapperHtml((ETAT.paie.impot&&ETAT.paie.impot.libelle)||"")})</td><td>${f0(totalImpot)}</td></tr>
       </tbody>
     </table>`}
-    <div style="margin-top:30px;display:flex;justify-content:space-between;font-size:11px;">
-      <div style="text-align:center;"><div style="height:44px;"></div>${t('fi_visa_intendant')}</div>
-      <div style="text-align:center;"><div style="height:44px;"></div>${t('fi_visa_coordonnateur')}</div>
+    <div style="margin-top:30px;display:flex;justify-content:space-between;font-size:11px;font-weight:600;">
+      <div style="text-align:center;width:220px;"><div style="height:44px;border-bottom:1px solid #12202f;margin-bottom:4px;"></div>${t('fi_visa_intendant')}</div>
+      <div style="text-align:center;width:220px;"><div style="height:44px;border-bottom:1px solid #12202f;margin-bottom:4px;"></div>${t('fi_visa_coordonnateur')}</div>
     </div>
   </div>`;
 }
@@ -10668,9 +10674,9 @@ function construireEtatPaiementHtml(mois){
         <tr style="font-weight:800;background:var(--slate-100);"><td colspan="4" style="text-align:left;">${t('fi_total')}</td><td>${f0(bs.reduce((s,b)=>s+b.netAPayer,0))}</td><td colspan="3"></td></tr>
       </tbody>
     </table>
-    <div style="margin-top:30px;display:flex;justify-content:space-between;font-size:11px;">
-      <div style="text-align:center;"><div style="height:44px;"></div>${t('recu_le_caissier')}</div>
-      <div style="text-align:center;"><div style="height:44px;"></div>${t('fi_visa_coordonnateur')}</div>
+    <div style="margin-top:30px;display:flex;justify-content:space-between;font-size:11px;font-weight:600;">
+      <div style="text-align:center;width:220px;"><div style="height:44px;border-bottom:1px solid #12202f;margin-bottom:4px;"></div>${t('recu_le_caissier')}</div>
+      <div style="text-align:center;width:220px;"><div style="height:44px;border-bottom:1px solid #12202f;margin-bottom:4px;"></div>${t('fi_visa_coordonnateur')}</div>
     </div>
   </div>`;
 }
@@ -10948,6 +10954,7 @@ function paieOngletLivre(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-fantome" onclick="SEL_PAIE.vueLivre='livre';naviguerVers('paie')" style="${SEL_PAIE.vueLivre==='livre'?'background:var(--navy-900);color:#fff;':''}">📒 ${t('paie_livre_titre')}</button>
         <button class="btn btn-fantome" onclick="SEL_PAIE.vueLivre='emargement';naviguerVers('paie')" style="${SEL_PAIE.vueLivre==='emargement'?'background:var(--navy-900);color:#fff;':''}">✍️ ${t('paie_emargement_titre')}</button>
+        <button class="btn btn-fantome" onclick="exporterLivrePaieCSV()">📥 ${t('paie_export_csv')}</button>
         <button class="btn btn-primaire" onclick="window.print()">🖨️ ${t('action_imprimer')}</button>
       </div></div>
     <p class="rappel">${t('paie_livre_rappel')}</p>
@@ -10957,6 +10964,28 @@ function paieOngletLivre(){
     </div>
   </div>
   <div id="zoneImpression">${SEL_PAIE.vueLivre==="emargement"?construireEtatPaiementHtml(mois):construireLivrePaieHtml(mois)}</div>`;
+}
+// Export tableur du livre de paie du mois (une ligne par bulletin, avec les
+// coordonnées de paiement) : sert de base au fichier de virement bancaire et
+// aux déclarations à l'organisme de sécurité sociale.
+function exporterLivrePaieCSV(){
+  const mois=SEL_PAIE.mois;
+  const bs=bulletinsDuMois(mois).filter(b=>b.statut!=="annule");
+  if(bs.length===0){ toast(t('paie_aucun_bulletin_mois'), true); return; }
+  const q=v=>'"'+String(v===undefined||v===null?"":v).replace(/"/g,'""')+'"';
+  const mon=ETAT.monnaie||"";
+  const lignes=[[t('paie_numero'),t('paie_periode'),t('pe_identifiant'),t('commun_nom_prenoms'),t('pe_fonction'),t('paie_type_court'),t('paie_base_heures'),t('paie_taux_horaire'),
+    t('paie_brut')+" ("+mon+")",t('paie_cotisations_salariales'),t('paie_impot'),t('paie_autres_retenues'),t('paie_net_a_payer'),t('paie_col_patronal'),t('paie_cout_employeur'),
+    t('paie_mode_paiement'),t('paie_banque'),t('paie_compte'),t('paie_num_secu'),t('paie_statut'),t('paie_date_paiement')].map(q).join(";")];
+  bs.forEach(b=>{ const c=b.contrat||{};
+    lignes.push([b.numero,b.mois,b.idPersonnel,b.nom,b.fonction,b.typeRemuneration==="horaire"?"H":"F",
+      b.typeRemuneration==="horaire"?b.heures:b.salaireBase, b.typeRemuneration==="horaire"?b.tauxHoraire:"",
+      b.brut,b.totalCotisationsSalariales,(b.impot&&b.impot.montant)||0,b.totalRetenues,b.netAPayer,b.totalCotisationsPatronales,b.coutEmployeur,
+      c.modePaiement||"",c.banque||"",c.compte||"",c.numeroSecu||"",libelleStatutBulletin(b.statut),b.datePaiement||""].map(q).join(";")); });
+  const blob=new Blob(["\ufeff"+lignes.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url;
+  a.download="Livre_de_paie_"+mois+".csv"; a.click(); URL.revokeObjectURL(url);
+  journaliser("Action","Export CSV du livre de paie "+mois+" ("+bs.length+" bulletins)");
 }
 function paieOngletVerification(){
   return `
