@@ -10571,7 +10571,7 @@ function construireBulletinPaieHtml(b){
         ${ligneId(t('commun_nom_prenoms'), "<b>"+echapperHtml(b.nom)+"</b>")}
         ${ligneId(t('pe_identifiant'), echapperHtml(b.idPersonnel))}
         ${ligneId(t('pe_fonction'), echapperHtml(b.fonction)+(ct.matiere?" ("+echapperHtml(ct.matiere)+")":""))}
-        ${ligneId(t('pe_statut_emploi'), echapperHtml(ct.statutEmploi||"")+(ct.categorie?" · "+echapperHtml(ct.categorie):""))}
+        ${ligneId(t('pe_statut_emploi'), echapperHtml(ct.statutEmploi||"")+(ct.categorie&&String(ct.categorie).trim().toLowerCase()!==String(ct.statutEmploi||"").trim().toLowerCase()?" · "+echapperHtml(ct.categorie):""))}
         ${ligneId(t('paie_type_remuneration'), libelleTypeRemuneration(b.typeRemuneration))}
         ${ligneId(t('paie_date_embauche'), (formatDateFR(ct.dateEmbauche)||"—")+(anciennete?" · "+t('paie_anciennete')+" "+anciennete:""))}
         ${ligneId(t('paie_num_secu'), echapperHtml(ct.numeroSecu||""))}
